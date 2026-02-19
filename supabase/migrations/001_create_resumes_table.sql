@@ -17,12 +17,15 @@ CREATE TABLE IF NOT EXISTS public.resumes (
 );
 
 -- Link to Supabase auth.users (optional but recommended)
+-- Ensure constraint and policy are idempotent: drop if they already exist, then recreate
+ALTER TABLE public.resumes DROP CONSTRAINT IF EXISTS resumes_user_fkey;
 ALTER TABLE public.resumes
   ADD CONSTRAINT resumes_user_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE;
 
 -- Enable row-level security and add a policy so users can only manage their own rows
 ALTER TABLE public.resumes ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Allow users to manage their own resumes" ON public.resumes;
 CREATE POLICY "Allow users to manage their own resumes" ON public.resumes
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);

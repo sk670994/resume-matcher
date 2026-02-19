@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "supabase:setup:sh": "bash ./scripts/create_supabase.sh",
+    "supabase:setup:ps1": "pwsh ./scripts/create_supabase.ps1",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
