@@ -5,17 +5,16 @@ import { createClient } from "@supabase/supabase-js";
 // POST body: { path: string }
 // Requires Authorization: Bearer <access_token> header from client session.
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-  console.warn("SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL not set");
-}
-
-const admin = createClient(SUPABASE_URL || "", SERVICE_ROLE_KEY || "");
-
 export async function POST(req: Request) {
   try {
+    const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+      return NextResponse.json({ error: "Server not configured with Supabase keys" }, { status: 500 });
+    }
+
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
     const body = await req.json();
     const { path } = body;
     if (!path) return NextResponse.json({ error: "Missing path" }, { status: 400 });
