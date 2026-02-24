@@ -4,6 +4,14 @@ import pdfParse from "pdf-parse";
 import mammoth from "mammoth";
 
 export async function POST(req: Request) {
+  let admin: ReturnType<typeof createClient> | null = null;
+  let resumeId: string | null = null;
+
+  async function setResumeStatus(status: "extracting" | "ready" | "error") {
+    if (!admin || !resumeId) return;
+    await admin.from("resumes").update({ status }).eq("id", resumeId);
+  }
+
   try {
     const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -18,33 +26,42 @@ export async function POST(req: Request) {
       );
     }
 
-    
-    // Mark as extracting
-    // read request body
+    // Read request body
     const body = await req.json().catch(() => ({}));
     const path = body?.path;
-    const resumeId = body?.resumeId;
+    resumeId = body?.resumeId;
 
     if (!path || !resumeId) {
       return NextResponse.json({ error: "Missing path or resumeId in request body" }, { status: 400 });
     }
 
-    // create admin client inside handler (avoid module-scope creation)
-    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+    // Create admin client inside handler (avoid module-scope creation)
+    admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-    // fetch the resume row
+    // Fetch the resume row
     const { data: resumeRow, error: fetchError } = await admin.from("resumes").select("*").eq("id", resumeId).single();
     if (fetchError || !resumeRow) {
       return NextResponse.json({ error: fetchError?.message || "Resume not found" }, { status: 404 });
     }
 
-    // Mark as extracting
-    await admin.from("resumes").update({ status: "extracting" }).eq("id", resumeId);
+    // Start extraction and clear stale AI fields from earlier attempts.
+    await admin
+      .from("resumes")
+      .update({
+        status: "extracting",
+        llm_summary: null,
+        llm_skills: null,
+        llm_roles: null,
+        llm_experience_years: null,
+        llm_processed_at: null,
+        llm_match: null,
+      })
+      .eq("id", resumeId);
 
     // Download file from storage
     const { data: downloadData, error: downloadError } = await admin.storage.from("resumes").download(path);
     if (downloadError) {
-      await admin.from("resumes").update({ status: "error" }).eq("id", resumeId);
+      await setResumeStatus("error");
       return NextResponse.json({ error: downloadError.message }, { status: 500 });
     }
 
@@ -74,15 +91,17 @@ export async function POST(req: Request) {
         }
       }
     } catch (err: any) {
-      await admin.from("resumes").update({ status: "error" }).eq("id", resumeId);
+      await setResumeStatus("error");
       return NextResponse.json({ error: "Extraction failed: " + (err?.message || String(err)) }, { status: 500 });
     }
 
-    // Update DB with extracted text and mark ready
-    await admin.from("resumes").update({ extracted_text: extractedText, status: "ready" }).eq("id", resumeId);
+    // Update DB with extracted text and mark ready (PR4 will move ready after LLM enrichment).
+    await admin.from("resumes").update({ extracted_text: extractedText }).eq("id", resumeId);
+    await setResumeStatus("ready");
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {
+    await setResumeStatus("error");
     return NextResponse.json({ error: err?.message || String(err) }, { status: 500 });
   }
 }
