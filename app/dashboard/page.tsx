@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileText, Sparkles, Target, UploadCloud } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,12 +56,6 @@ function getConfidenceVariant(confidence: ResumeMatchResult["confidence"]) {
 
 function formatBreakdown(value: number): string {
   return `${Math.round(value * 100)}%`;
-}
-
-function getScoreTone(score: number) {
-  if (score >= 80) return "bg-emerald-500";
-  if (score >= 60) return "bg-amber-500";
-  return "bg-rose-500";
 }
 
 export default function DashboardPage() {
@@ -330,194 +323,145 @@ export default function DashboardPage() {
     return <div className="p-6">Checking session...</div>;
   }
 
-  const readyResumes = resumes.filter((resume) => resume.status === "ready").length;
-  const extractedResumes = resumes.filter((resume) => Boolean(resume.extracted_text)).length;
-  const averageScore = matchResults.length
-    ? Math.round(matchResults.reduce((sum, result) => sum + result.score, 0) / matchResults.length)
-    : 0;
-
   return (
-    <main className="relative overflow-hidden bg-slate-950 py-10 text-slate-100">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(14,165,233,0.2),transparent_35%),radial-gradient(circle_at_80%_20%,rgba(16,185,129,0.16),transparent_30%),radial-gradient(circle_at_50%_100%,rgba(251,146,60,0.14),transparent_30%)]" />
-      <div className="container relative mx-auto max-w-6xl space-y-6 px-4">
-        <section className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <div>
-              <p className="inline-flex items-center gap-2 rounded-full border border-cyan-300/40 bg-cyan-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-cyan-200">
-                <Sparkles className="h-3.5 w-3.5" />
-                Match Control Center
-              </p>
-              <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Resume Matcher Dashboard</h1>
-              <p className="mt-2 text-sm text-slate-300">
-                Upload resumes, tune requirements, and compare ranked candidates with clearer signals.
-              </p>
-            </div>
-            <Badge className="border-cyan-300/40 bg-cyan-400/20 text-cyan-100" variant="outline">
-              MVP Match
-            </Badge>
-          </div>
+    <main className="py-6">
+      <div className="mx-auto max-w-5xl space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Resume Upload</CardTitle>
+            <CardDescription>Upload PDF resumes and manage uploaded files.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-3 rounded-md border p-3">
+                <Label htmlFor="resume-file">Resume PDF</Label>
+                <input
+                  id="resume-file"
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  onChange={(event) => setSelectedFile(event.target.files?.[0] || null)}
+                  aria-describedby="upload-status"
+                  className="w-full rounded-md border p-2 text-sm"
+                />
+                <Button className="w-full" onClick={handleUpload} disabled={uploading}>
+                  {uploading ? "Uploading..." : "Upload Resume"}
+                </Button>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-white/10 bg-slate-900/70 p-3">
-              <p className="text-xs text-slate-400">Uploaded</p>
-              <p className="mt-1 text-2xl font-semibold">{resumes.length}</p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-slate-900/70 p-3">
-              <p className="text-xs text-slate-400">Extraction Ready</p>
-              <p className="mt-1 text-2xl font-semibold">{readyResumes}</p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-slate-900/70 p-3">
-              <p className="text-xs text-slate-400">Average Match</p>
-              <p className="mt-1 text-2xl font-semibold">{averageScore}%</p>
-            </div>
-          </div>
-        </section>
+                {uploadMessage && (
+                  <p id="upload-status" className="text-sm text-slate-700" aria-live="polite">
+                    {uploadMessage}
+                  </p>
+                )}
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card className="h-full border-white/10 bg-slate-900/70 text-slate-100">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UploadCloud className="h-5 w-5 text-cyan-300" />
-                Resume Upload
-              </CardTitle>
-              <CardDescription className="text-slate-300">
-                Upload PDF resumes to Supabase Storage.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Label htmlFor="resume-file">Resume PDF</Label>
-              <input
-                id="resume-file"
-                type="file"
-                accept=".pdf,application/pdf"
-                onChange={(event) => setSelectedFile(event.target.files?.[0] || null)}
-                aria-describedby="upload-status"
-                className="w-full rounded-md border border-white/20 bg-slate-950/60 p-2 text-sm"
-              />
-              <Button className="w-full bg-cyan-500 text-slate-950 hover:bg-cyan-400" onClick={handleUpload} disabled={uploading}>
-                {uploading ? "Uploading..." : "Upload Resume"}
-              </Button>
-
-              {uploadMessage && (
-                <p id="upload-status" className="text-sm text-slate-300" aria-live="polite">
-                  {uploadMessage}
-                </p>
-              )}
-
-              {bucketExists === false && (
-                <div className="mt-2 text-sm text-rose-300">
-                  <p>Bucket not found. Create a private `resumes` bucket in Supabase.</p>
-                  <div className="mt-2 flex gap-2">
-                    <a
-                      href={
-                        (() => {
-                          try {
-                            const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-                            const projectRef = new URL(url).hostname.split(".")[0];
-                            return `https://app.supabase.com/project/${projectRef}/storage/buckets`;
-                          } catch {
-                            return "https://app.supabase.com";
-                          }
-                        })()
-                      }
-                      target="_blank"
-                      rel="noreferrer"
-                      className="underline"
-                    >
-                      Open Supabase Storage
-                    </a>
-                    <a href="/supabase/migrations/001_create_resumes_table.sql" className="underline">
-                      View migration
-                    </a>
-                    <button
-                      onClick={async () => {
-                        setCreatingBucket(true);
-                        setUploadMessage(null);
-                        try {
-                          const response = await fetch("/api/admin/create-bucket", { method: "POST" });
-                          const json = await response.json();
-                          if (response.ok && json.ok) {
-                            setUploadMessage("Bucket created. Run migrations next.");
-                            await checkBucketExists();
-                          } else {
-                            setUploadMessage(json.error || "Failed to create bucket.");
-                          }
-                        } catch (error: any) {
-                          setUploadMessage(error?.message || String(error));
-                        } finally {
-                          setCreatingBucket(false);
+                {bucketExists === false && (
+                  <div className="mt-2 text-sm text-red-600">
+                    <p>Bucket not found. Create a private `resumes` bucket in Supabase.</p>
+                    <div className="mt-2 flex gap-2">
+                      <a
+                        href={
+                          (() => {
+                            try {
+                              const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+                              const projectRef = new URL(url).hostname.split(".")[0];
+                              return `https://app.supabase.com/project/${projectRef}/storage/buckets`;
+                            } catch {
+                              return "https://app.supabase.com";
+                            }
+                          })()
                         }
-                      }}
-                      className="ml-2 underline"
-                      disabled={creatingBucket}
-                    >
-                      {creatingBucket ? "Creating..." : "Create bucket (server)"}
-                    </button>
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline"
+                      >
+                        Open Supabase Storage
+                      </a>
+                      <a href="/supabase/migrations/001_create_resumes_table.sql" className="underline">
+                        View migration
+                      </a>
+                      <button
+                        onClick={async () => {
+                          setCreatingBucket(true);
+                          setUploadMessage(null);
+                          try {
+                            const response = await fetch("/api/admin/create-bucket", { method: "POST" });
+                            const json = await response.json();
+                            if (response.ok && json.ok) {
+                              setUploadMessage("Bucket created. Run migrations next.");
+                              await checkBucketExists();
+                            } else {
+                              setUploadMessage(json.error || "Failed to create bucket.");
+                            }
+                          } catch (error: any) {
+                            setUploadMessage(error?.message || String(error));
+                          } finally {
+                            setCreatingBucket(false);
+                          }
+                        }}
+                        className="ml-2 underline"
+                        disabled={creatingBucket}
+                      >
+                        {creatingBucket ? "Creating..." : "Create bucket (server)"}
+                      </button>
+                    </div>
                   </div>
+                )}
+              </div>
+
+              <div className="space-y-3 rounded-md border p-3">
+                <div>
+                  <h2 className="text-base font-semibold">Uploaded Resumes</h2>
+                  <p className="text-sm text-slate-600">Files, extraction status, and timestamps.</p>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                {resumes.length === 0 ? (
+                  <p>No resumes uploaded yet.</p>
+                ) : (
+                  <div className="max-h-[20rem] overflow-y-auto pr-2">
+                    <ul className="space-y-3" aria-label="Uploaded resumes list">
+                      {resumes.map((resume) => (
+                        <li key={resume.id} className="flex justify-between gap-4 rounded-md border p-3">
+                          <div className="min-w-0">
+                            <p className="truncate font-medium">{resume.file_name}</p>
+                            <p className="text-xs text-slate-500">
+                              {new Date(resume.uploaded_at).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={resume.status === "ready" ? "default" : "secondary"}>
+                              {resume.status || "unknown"}
+                            </Badge>
+                            {resume.status !== "ready" && (
+                              <Button
+                                onClick={() => triggerExtraction(resume.id, resume.path)}
+                                size="sm"
+                                variant="secondary"
+                                disabled={extractingResumeId === resume.id}
+                              >
+                                {extractingResumeId === resume.id ? "Extracting..." : "Extract"}
+                              </Button>
+                            )}
+                            <Button size="sm" variant="outline" onClick={() => handleView(resume.path)}>
+                              View
+                            </Button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card className="h-full border-white/10 bg-slate-900/70 text-slate-100">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-emerald-300" />
-                Uploaded Resumes
-              </CardTitle>
-              <CardDescription className="text-slate-300">
-                Files, extraction status, and timestamps
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {resumes.length === 0 ? (
-                <p>No resumes uploaded yet.</p>
-              ) : (
-                <ul className="space-y-3" aria-label="Uploaded resumes list">
-                  {resumes.map((resume) => (
-                    <li key={resume.id} className="flex justify-between gap-4 rounded-xl border border-white/10 bg-slate-950/70 p-3">
-                      <div className="min-w-0">
-                        <p className="truncate font-medium">{resume.file_name}</p>
-                        <p className="text-xs text-slate-400">
-                          {new Date(resume.uploaded_at).toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={resume.status === "ready" ? "default" : "secondary"}>
-                          {resume.status || "unknown"}
-                        </Badge>
-                        {resume.status !== "ready" && (
-                          <Button
-                            onClick={() => triggerExtraction(resume.id, resume.path)}
-                            size="sm"
-                            variant="secondary"
-                            disabled={extractingResumeId === resume.id}
-                          >
-                            {extractingResumeId === resume.id ? "Extracting..." : "Extract"}
-                          </Button>
-                        )}
-                        <Button size="sm" variant="outline" onClick={() => handleView(resume.path)}>
-                          View
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="h-full border-white/10 bg-slate-900/70 text-slate-100">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-amber-300" />
-                Job Requirements
-              </CardTitle>
-              <CardDescription className="text-slate-300">
-                Enter role, skills, experience, and keywords to score extracted resumes.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>Job Requirements and Matching Results</CardTitle>
+            <CardDescription>
+              Enter role, skills, experience, and keywords to score extracted resumes.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <section className="space-y-3">
               <div className="space-y-1">
                 <Label htmlFor="role">Role</Label>
                 <Input
@@ -525,7 +469,6 @@ export default function DashboardPage() {
                   placeholder="Frontend Engineer"
                   value={requirements.role}
                   onChange={(event) => handleRequirementChange("role", event.target.value)}
-                  className="border-white/20 bg-slate-950/60"
                 />
               </div>
               <div className="space-y-1">
@@ -535,7 +478,6 @@ export default function DashboardPage() {
                   placeholder="React, TypeScript, Next.js"
                   value={requirements.skills}
                   onChange={(event) => handleRequirementChange("skills", event.target.value)}
-                  className="border-white/20 bg-slate-950/60"
                 />
               </div>
               <div className="space-y-1">
@@ -545,7 +487,6 @@ export default function DashboardPage() {
                   placeholder="5 years, senior, lead"
                   value={requirements.experience}
                   onChange={(event) => handleRequirementChange("experience", event.target.value)}
-                  className="border-white/20 bg-slate-950/60"
                 />
               </div>
               <div className="space-y-1">
@@ -555,28 +496,27 @@ export default function DashboardPage() {
                   placeholder="performance optimization, graphql, mentoring"
                   value={requirements.keywords}
                   onChange={(event) => handleRequirementChange("keywords", event.target.value)}
-                  className="border-white/20 bg-slate-950/60"
                 />
               </div>
-              <Button className="w-full bg-amber-400 text-slate-950 hover:bg-amber-300" onClick={runMatch} disabled={matching}>
+              <Button className="w-full" onClick={runMatch} disabled={matching}>
                 {matching ? "Running..." : "Run Match"}
               </Button>
               {matchMessage && (
-                <p className="text-sm text-slate-300" role="status" aria-live="polite">
+                <p className="text-sm text-slate-700" role="status" aria-live="polite">
                   {matchMessage}
                 </p>
               )}
-            </CardContent>
-          </Card>
+            </section>
 
-          <Card className="h-full border-white/10 bg-slate-900/70 text-slate-100">
-            <CardHeader>
-              <CardTitle>Matching Results</CardTitle>
-              <CardDescription className="text-slate-300">
-                Ranked by weighted role, skills, experience, and keywords
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            <Separator />
+
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-base font-semibold">Matching Results</h2>
+                <p className="text-sm text-slate-600">
+                  Ranked by weighted role, skills, experience, and keywords
+                </p>
+              </div>
               {matchResults.length === 0 ? (
                 <p>No results yet.</p>
               ) : (
@@ -584,7 +524,7 @@ export default function DashboardPage() {
                   {matchResults.map((result, index) => (
                     <article
                       key={result.resumeId}
-                      className="space-y-3 rounded-xl border border-white/10 bg-slate-950/70 p-4"
+                      className="space-y-3 rounded-md border p-4"
                       aria-label={`Result ${index + 1}`}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -592,7 +532,7 @@ export default function DashboardPage() {
                           <p className="truncate font-semibold">
                             {index + 1}. {result.fileName}
                           </p>
-                          <p className="text-xs text-slate-400">
+                          <p className="text-xs text-slate-500">
                             Skills matched: {result.matchedSkills.length} | Keywords matched:{" "}
                             {result.matchedKeywords.length}
                           </p>
@@ -609,13 +549,13 @@ export default function DashboardPage() {
 
                       <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
                         <div
-                          className={`h-full ${getScoreTone(result.score)} transition-all duration-500`}
+                          className="h-full bg-slate-500"
                           style={{ width: `${result.score}%` }}
                           aria-hidden
                         />
                       </div>
 
-                      <div className="flex flex-wrap gap-2 text-xs text-slate-300">
+                      <div className="flex flex-wrap gap-2 text-xs text-slate-700">
                         <Badge variant={result.roleMatched ? "default" : "outline"}>
                           role: {result.roleMatched ? "match" : "partial/miss"} ({formatBreakdown(result.breakdown.role)})
                         </Badge>
@@ -628,19 +568,19 @@ export default function DashboardPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <p className="text-xs font-medium uppercase tracking-wide text-emerald-300">Matched tags</p>
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-600">Matched tags</p>
                         <div className="flex flex-wrap gap-2">
                           {result.matchedKeywords.length === 0 && result.matchedSkills.length === 0 ? (
                             <Badge variant="outline">No term matches</Badge>
                           ) : (
                             <>
                               {result.matchedSkills.map((skill) => (
-                                <Badge key={`${result.resumeId}-skill-${skill}`} className="bg-emerald-500/20 text-emerald-100" variant="outline">
+                                <Badge key={`${result.resumeId}-skill-${skill}`} variant="outline">
                                   skill: {skill}
                                 </Badge>
                               ))}
                               {result.matchedKeywords.map((keyword) => (
-                                <Badge key={`${result.resumeId}-keyword-${keyword}`} className="bg-cyan-500/20 text-cyan-100" variant="outline">
+                                <Badge key={`${result.resumeId}-keyword-${keyword}`} variant="outline">
                                   keyword: {keyword}
                                 </Badge>
                               ))}
@@ -651,7 +591,7 @@ export default function DashboardPage() {
 
                       {(result.missingSkills.length > 0 || result.missingKeywords.length > 0) && (
                         <div className="space-y-2">
-                          <p className="text-xs font-medium uppercase tracking-wide text-rose-300">Missing tags</p>
+                          <p className="text-xs font-medium uppercase tracking-wide text-slate-600">Missing tags</p>
                           <div className="flex flex-wrap gap-2">
                             {result.missingSkills.map((skill) => (
                               <Badge key={`${result.resumeId}-missing-skill-${skill}`} variant="destructive">
@@ -667,14 +607,14 @@ export default function DashboardPage() {
                         </div>
                       )}
 
-                      <Separator className="bg-white/10" />
+                      <Separator />
                     </article>
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </div>
+            </section>
+          </CardContent>
+        </Card>
       </div>
     </main>
   );

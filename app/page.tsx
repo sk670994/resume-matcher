@@ -10,10 +10,11 @@ export const metadata: Metadata = {
 
 export default function HomePage() {
   return (
-    <main className="container mx-auto flex min-h-screen max-w-5xl items-center px-4 py-10">
-      <Card className="w-full border-slate-200">
+    <main className="mx-auto max-w-4xl py-10">
+      <Card className="w-full">
         <CardHeader>
-          <CardTitle className="text-3xl">Resume Matcher</CardTitle>
+          <CardTitle className="text-2xl">Resume Matcher</CardTitle>
+          <CardDescription>Simple resume upload and matching workflow.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
           <Button asChild>
@@ -27,4 +28,3 @@ export default function HomePage() {
     </main>
   );
 }
-

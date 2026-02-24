@@ -57,7 +57,7 @@ useEffect(() => {
 
         <button
           onClick={handleSignOut}
-          className="text-sm text-destructive"
+          className="text-sm"
         >
 
           Sign Out
