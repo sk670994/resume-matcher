@@ -37,9 +37,10 @@ export default function AuthPage() {
   }
 
   return (
-    <main className="max-w-xl mx-auto p-6">
-      <h1 className="text-2xl font-semibold mb-4">{mode === "sign-in" ? "Sign In" : "Sign Up"}</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <main className="mx-auto max-w-xl">
+      <section className="rounded-lg border p-6">
+        <h1 className="mb-4 text-2xl font-semibold">{mode === "sign-in" ? "Sign In" : "Sign Up"}</h1>
+        <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <Label htmlFor="email">Email</Label>
           <Input id="email" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -57,8 +58,8 @@ export default function AuthPage() {
             {mode === "sign-in" ? "Switch to Sign Up" : "Switch to Sign In"}
           </Button>
         </div>
-      </form>
+        </form>
+      </section>
     </main>
   );
 }
-
